@@ -684,6 +684,34 @@ _R() {
 	return ${status}
 }
 
+_e() {
+	# Remove the contents of a path (if it is a directory)
+	# but not the path itself.
+	# Lines of this type accept shell-style globs in place of normal path names.
+	local path
+	local paths=$1
+	local status
+
+	[ "${REMOVE}" -gt 0 ] || return 0
+
+	status=0
+	for path in ${paths}; do
+		if [ -d "${path}" ]; then
+			if owned_by_root "${path}" ; then
+				echo "owned_by_root ${path}" >&2
+				echo "cowardly refusing to clean directory" >&2
+				return 0
+			fi
+			dryrun_or_real  find "${path}" -mount -mindepth 1 -delete || status="$?"
+		fi
+		# Return on first fail
+		if [ $status -ne 0 ]; then
+			exit $status
+		fi
+	done
+	return ${status}
+}
+
 _w() {
 	# Write the argument parameter to a file, if it exists.
 	local path=$1 mode=$2 uid=$3 gid=$4 age=$5 arg=$6
@@ -850,7 +878,7 @@ for FILE in ${tmpfiles_d} ; do
 
 		# whine about invalid entries
 		case ${cmd} in
-			f|F|w|d|D|v|p|L|c|C|b|x|X|r|R|z|Z|q|Q|h|H|a|A) ;;
+			e|f|F|w|d|D|v|p|L|c|C|b|x|X|r|R|z|Z|q|Q|h|H|a|A) ;;
 			*) warninvalid ; continue ;;
 		esac
 
